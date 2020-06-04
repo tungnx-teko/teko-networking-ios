@@ -42,6 +42,7 @@ public class Router<EndPoint: EndPointType>: NetworkRouter {
         let session = URLSession.shared
         do {
             let request = try self.buildRequest(from: route)
+            NetworkLogger.log(request: request)
             task = session.dataTask(with: request, completionHandler: { (data, response, error) in
                 if error != nil {
                     completion(nil, .undefined)
@@ -84,12 +85,15 @@ public class Router<EndPoint: EndPointType>: NetworkRouter {
         var request = URLRequest(url: route.baseURL.appendingPathComponent(route.path),
                                  cachePolicy: .reloadIgnoringLocalAndRemoteCacheData,
                                  timeoutInterval: 10.0)
-        request.httpMethod = "POST"
+        request.httpMethod = route.httpMethod.rawValue
         switch route.task {
         case .request:
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         case .requestParametersAndHeaders(let bodyParameters, let bodyEncoding, let urlParameters, let additionHeaders):
             do {
+                additionHeaders?.forEach { (key, value) in
+                    request.setValue(value, forHTTPHeaderField: key)
+                }
                 switch bodyEncoding {
                 case .jsonEncoding:
                     try JSONParameterEncoder().encode(urlRequest: &request, with: bodyParameters ?? Parameters())
